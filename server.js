@@ -66,6 +66,11 @@ const startServer = async () => {
   res.json(results);
 });
 
+  // **ADDED ROUTE** to fix "Cannot GET /" error (line 54)
+  app.get('/', (req, res) => {
+    res.send('Hello, backend is working!');
+  });
+
   app.listen(port, () => {
     console.log(`✅ Server is running at http://localhost:${port}`);
   });
