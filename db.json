@@ -1,0 +1,28 @@
+{
+  "votes": {
+    "Olaf-Renekton": {
+      "Olaf": 44,
+      "Renekton": 42
+    },
+    "Darius-Olaf": {
+      "Darius": 40,
+      "Olaf": 49
+    },
+    "Darius-Renekton": {
+      "Darius": 35,
+      "Renekton": 39
+    },
+    "Gwen-Olaf": {
+      "Olaf": 30,
+      "Gwen": 41
+    },
+    "Darius-Gwen": {
+      "Darius": 25,
+      "Gwen": 28
+    },
+    "Gwen-Renekton": {
+      "Renekton": 28,
+      "Gwen": 28
+    }
+  }
+}
