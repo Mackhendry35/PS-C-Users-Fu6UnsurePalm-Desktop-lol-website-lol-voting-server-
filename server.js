@@ -71,11 +71,11 @@ const startServer = async () => {
     res.send('Hello, backend is working!');
   });
 
+  // ADDED!!! New dump-votes route to inspect raw data
   app.get('/dump-votes', async (req, res) => {
-  await db.read(); // Refresh from db.json
-  res.json(db.data.votes);
-});
-
+    await db.read(); // Refresh from db.json
+    res.json(db.data.votes); // Send back the votes
+  });
 
   app.listen(port, () => {
     console.log(`✅ Server is running at http://localhost:${port}`);
