@@ -1,15 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const app = express();
 const port = 3000;
 
-// 🔑 Replace these with your actual values from Supabase Project Settings > API
-const SUPABASE_URL = 'https://opolmixzgxmsnfxifefa.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wb2xtaXh6Z3htc25meGlmZWZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NjU3MDcsImV4cCI6MjA2NDQ0MTcwN30.ubOGTbrHtLBtVT9rn_HZqpBcbU-mM8KJ_vyiX-7gd5k';
-
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 app.use(cors());
