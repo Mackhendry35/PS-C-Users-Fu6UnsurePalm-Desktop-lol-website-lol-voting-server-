@@ -1,85 +1,93 @@
 import express from 'express';
 import cors from 'cors';
-import { Low } from 'lowdb';
-import { JSONFile } from 'lowdb/node';
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const app = express();
 const port = 3000;
 
-// Setup database
-const adapter = new JSONFile('db.json');
-const db = new Low(adapter, { defaultData: { votes: {} } });
+// 🔑 Replace these with your actual values from Supabase Project Settings > API
+const SUPABASE_URL = 'https://opolmixzgxmsnfxifefa.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wb2xtaXh6Z3htc25meGlmZWZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NjU3MDcsImV4cCI6MjA2NDQ0MTcwN30.ubOGTbrHtLBtVT9rn_HZqpBcbU-mM8KJ_vyiX-7gd5k';
 
-// Wrap everything inside an async function
-const startServer = async () => {
-  await db.read();
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  app.use(cors());
-  app.use(express.json());
+app.use(cors());
+app.use(express.json());
 
-  // Normalize keys to always use the same format (e.g., dashes)
-  app.get('/votes', (req, res) => {
-    const matchup = req.query.matchup;
-  
-    if (matchup) {
-      const key = matchup.replace(/_/g, '-'); // normalize
-      const voteData = db.data.votes[key] || {};
-      return res.json(voteData);
-    }
-  
-    // If no specific matchup requested, return all normalized votes
-    const normalizedVotes = {};
-    for (const key in db.data.votes) {
-      const normalizedKey = key.replace(/_/g, '-');
-      normalizedVotes[normalizedKey] = db.data.votes[key];
-    }
+// 🟢 GET votes for a matchup or all
+app.get('/votes', async (req, res) => {
+  const { matchup } = req.query;
 
-    res.json({ votes: normalizedVotes });
+  if (matchup) {
+    const key = matchup.replace(/_/g, '-');
+    const { data, error } = await supabase
+      .from('votes')
+      .select('*')
+      .eq('matchup', key)
+      .single();
+
+    if (error && error.code !== 'PGRST116') return res.status(500).json({ error });
+    return res.json(data || {});
+  }
+
+  // If no matchup is specified, return all
+  const { data, error } = await supabase.from('votes').select('*');
+  if (error) return res.status(500).json({ error });
+
+  const results = {};
+  data.forEach(({ matchup, vote_counts }) => {
+    results[matchup] = vote_counts;
   });
-  
 
- // Route to vote
- app.post('/votes', async (req, res) => {
-  const { matchup, vote } = req.body; // This expects 'matchup' and 'vote' from the frontend
+  res.json({ votes: results });
+});
+
+// 🟢 POST vote
+app.post('/votes', async (req, res) => {
+  const { matchup, vote } = req.body;
   const key = matchup.replace(/_/g, '-');
 
-  if (!db.data.votes[key]) {
-    db.data.votes[key] = { [vote]: 1 }; // Initialize vote count for the first time
+  // Try to get existing vote data
+  const { data: existing, error: fetchError } = await supabase
+    .from('votes')
+    .select('*')
+    .eq('matchup', key)
+    .single();
+
+  if (fetchError && fetchError.code !== 'PGRST116') {
+    return res.status(500).json({ error: fetchError });
+  }
+
+  let vote_counts = existing?.vote_counts || {};
+  vote_counts[vote] = (vote_counts[vote] || 0) + 1;
+
+  if (existing) {
+    // Update existing record
+    const { error: updateError } = await supabase
+      .from('votes')
+      .update({ vote_counts })
+      .eq('matchup', key);
+
+    if (updateError) return res.status(500).json({ error: updateError });
   } else {
-    db.data.votes[key][vote] = (db.data.votes[key][vote] || 0) + 1;
+    // Create new record
+    const { error: insertError } = await supabase
+      .from('votes')
+      .insert([{ matchup: key, vote_counts }]);
+
+    if (insertError) return res.status(500).json({ error: insertError });
   }
 
-  await db.write();
-
-  res.json({ success: true, votes: db.data.votes[key] });
+  res.json({ success: true, votes: vote_counts });
 });
 
-// ADDED!!! Serve the results for the results page
- app.get('/api/results', async (req, res) => {
-  await db.read();
-  const results = {};
-
-  for (const matchup in db.data.votes) {
-    results[matchup] = db.data.votes[matchup];
-  }
-
-  res.json(results);
+// 🟢 Simple route to verify server is up
+app.get('/', (req, res) => {
+  res.send('✅ Backend is working with Supabase now!');
 });
 
-  // **ADDED ROUTE** to fix "Cannot GET /" error (line 54)
-  app.get('/', (req, res) => {
-    res.send('Hello, backend is working!');
-  });
+app.listen(port, () => {
+  console.log(`✅ Server is running at http://localhost:${port}`);
+});
 
-  // ADDED!!! New dump-votes route to inspect raw data
-  app.get('/dump-votes', async (req, res) => {
-    await db.read(); // Refresh from db.json
-    res.json(db.data.votes); // Send back the votes
-  });
-
-  app.listen(port, () => {
-    console.log(`✅ Server is running at http://localhost:${port}`);
-  });
-};
-
-startServer();
